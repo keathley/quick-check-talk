@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>QuickCheck vs. Goos</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/night.css" id="theme">
+		<!-- <link rel="stylesheet" href="css/theme/solarized.css" id="theme"> -->
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+		<script>
+			if( window.location.search.match( /print-pdf/gi ) ) {
+				var link = document.createElement( 'link' );
+				link.rel = 'stylesheet';
+				link.type = 'text/css';
+				link.href = 'css/print/pdf.css';
+				document.getElementsByTagName( 'head' )[0].appendChild( link );
+			}
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>QuickCheck vs. GOOS</h1>
+					<h3>Testing for better software</h3>
+					<p>
+						<small>
+							<a href="https://keathley.github.io">
+								Chris Keathley
+							</a> /
+							<a href="http://twitter.com/ChrisKeathley">
+								@ChrisKeathley
+							</a>
+						</small>
+					</p>
+				</section>
+
+				<section>
+					<h2>What I was listening to</h2>
+					<img src="https://i.scdn.co/image/32b7d781ac14390194fc7a9577b0695df7ef2396" alt="Big Gigantic">
+					<aside class="notes">
+						Cuz Music
+					</aside>
+				</section>
+
+				<section>
+					<h2>What we're going to talk about</h2>
+					<ul>
+						<li>TDD/BDD (GOOS)</li>
+						<li>QuickCheck</li>
+						<li>Where we can use property testing</li>
+					</ul>
+					<aside class="notes">
+						This be da business
+					</aside>
+				</section>
+
+				<section>
+					<h2>Caveat - I have no idea what I'm doing</h2>
+          <img src="images/ihavenoidea.gif" alt="">
+				</section>
+
+				<section>
+					<img src="images/doyoutest.jpeg" alt="Do you even test">
+					<aside class="notes">
+						Ask people if and how they test their code
+					</aside>
+				</section>
+
+				<section>
+					<section>
+						<h2>Goos</h2>
+						<p>
+							Growing Object-Oriented Software Guided by Tests
+						</p>
+						<img src="images/goos.jpg" alt="Goos">
+					</section>
+					<section>
+						<h2>Emphasizes</h2>
+						<ul>
+							<li>Tests first</li>
+              <li>Tests for design as well as regression</li>
+							<li>Testing outside in based on behaviour (BDD)</li>
+              <li>Mock Objects</li>
+							<li>End to End (not Edge to Edge)</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Example</h2>
+						<p>Lets build an music player</p>
+						<ul>
+							<li>Post a song id to an endpoint to add it to the queue</li>
+							<li>Broadcast this change to all connected clients</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Tests</h2>
+						<pre><code class="ruby" data-trim contenteditable>
+describe "POST #queue" do
+  it "should add the track to the queue and alert clients of change" do
+    id = 1337
+    track = instance_double("Track", :id => id)
+
+    expect(Track).to receive(:find).with(id).and_return(track)
+    expect(Queue).to receive(:add_track).with(track).and_return 1
+    expect(Broadcast).to receive(:broadcast)
+
+    post '/queue', :id => id
+  end
+end
+						</code></pre>
+					</section>
+					<section>
+						<h2>Api</h2>
+						<pre><code class="ruby" data-trim contenteditable>
+class App < Sinatra::Base
+  post "/queue" do
+    @track = Track.find(params[:id])
+    Queue.add_track(@track)
+    Broadcast.send('/songs', @track)
+  end
+end
+						</code></pre>
+					</section>
+          <section>
+            <h2>But what about errors</h2>
+            <pre><code class="ruby" data-trim contenteditable>
+describe "POST #queue" do
+  it "should add the track to the queue and alert clients of change" do
+    id = 1337
+    track = instance_double("Track", :id => id)
+
+    expect(Track).to receive(:find).with(id).and_return(track)
+    expect(Queue).to receive(:add_track).with(track).and_return 1
+    expect(Broadcast).to receive(:broadcast)
+
+    post '/queue', :id => id
+  end
+end
+            </code></pre>
+            <pre><code class="ruby" data-trim contenteditable>
+class App < Sinatra::Base
+  post "/queue" do
+    @track = Track.find(params[:id])
+    Queue.add_track(@track)
+    Broadcast.send('/songs', @track)
+  end
+end
+            </code></pre>
+          </section>
+          <section>
+            <h2>Yay tests!</h2>
+            <ul>
+              <li>Tests only cover the conditions that you set (duh)</li>
+              <li>You have to be explicit in your error conditions</li>
+              <li>Find errors in staging (or production) and add tests</li>
+              <li>(Still better then no tests)</li>
+            </ul>
+          </section>
+          <section>
+            <h2>Yay tests!</h2>
+            <ul>
+              <li>Tests only cover the conditions that you set (duh)</li>
+              <li>You have to be explicit in your error conditions</li>
+              <li>Find errors in staging (or production) and add tests</li>
+            </ul>
+          </section>
+				</section>
+        <section>
+          <section>
+            <h2>Enter QuickCheck</h2>
+            <img src="images/quickcheck.png" alt="Quick Check Paper">
+          </section>
+          <section>
+            <h2>QuickCheck</h2>
+            <ul>
+              <li>Developed in 1999/2000</li>
+              <li>Written in Haskel</li>
+              <li>Widely adopted in hipster FP circles (clojure, scala, erlang)</li>
+              <li>Libraries in most languages (Crockford wrote it for JS)</li>
+            </ul>
+          </section>
+          <section>
+            <h2>QuickCheck I can't even</h2>
+            <ul>
+              <li>Testing is based on defined properties</li>
+              <li>Data is generated in defined ways</li>
+              <li>Errors are found dynamically</li>
+              <li>Shrinkers find smallest error condition</li>
+            </ul>
+          </section>
+          <section>
+            <h2>Properties</h2>
+            <p>A way of saying what this thing should do</p>
+          </section>
+          <section>
+            <h2>Generators</h2>
+            <p>Generate fake data for testing</p>
+          </section>
+          <section>
+            <h2>Shrinkers</h2>
+            <p>Help narrow down failing cases</p>
+          </section>
+        </section>
+        <section>
+          <section>
+            <h2>So what did we learn here</h2>
+          </section>
+          <section>
+            <h2>Property testing requires thinking differently about the problem</h2>
+          </section>
+          <section>
+            <h2>Property testing is slow</h2>
+          </section>
+          <section>
+            <h2>Emphasizes Hammocking</h2>
+          </section>
+          <section>
+            <h2>Not useful for every problem</h2>
+          </section>
+        </section>
+        <section>
+          <h1>Thanks</h1>
+          <small>
+            <a href="https://keathley.github.io">
+              Chris Keathley
+            </a> /
+            <a href="http://twitter.com/ChrisKeathley">
+              @ChrisKeathley
+            </a>
+          </small>
+        </section>
+
+			</div>
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+				transition: Reveal.getQueryHash().transition || 'linear', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
